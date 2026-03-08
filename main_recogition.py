@@ -4,14 +4,17 @@ import cv2
 import cv2
 import numpy as np
 import pickle
+import putText_chinese
+from putText_chinese import cv2_add_chinese_text
 
+CNN_DETECTOR_PATH = "model/mmod_human_face_detector.dat"
 PREDICTOR_PATH="model/shape_predictor_5_face_landmarks.dat"
 RECOGNIZER_PATH="model/dlib_face_recognition_resnet_model_v1.dat"
 DATABASE_PATH="face.database.pkl"
 
 class Recognizer:
     def __init__(self):
-        self.detector=dlib.get_frontal_face_detector()
+        self.detector=dlib.cnn_face_detection_model_v1(CNN_DETECTOR_PATH)
         self.sp=dlib.shape_predictor(PREDICTOR_PATH)
         self.facerec=dlib.face_recognition_model_v1(RECOGNIZER_PATH)
         with open(DATABASE_PATH,"rb") as f:
@@ -27,14 +30,15 @@ class Recognizer:
         else:
             return "未知",min_distance
     def process_image(self,image):
-        scale_factor=0.25
+        scale_factor=1
         small_image=cv2.resize(image,(0,0),fx=scale_factor,fy=scale_factor)
         rbg_small_image=cv2.cvtColor(small_image,cv2.COLOR_BGR2RGB)
-        dets=self.detector(rbg_small_image,0)
+        dets=self.detector(rbg_small_image)
         results=[]
-        for detection in dets:
+        for d in dets:
+            detection=d.rect
             shape=self.sp(rbg_small_image,detection)
-            face_encoding=np.array(self.facerec.compute_face_descriptor(rbg_small_image,detection))
+            face_encoding=np.array(self.facerec.compute_face_descriptor(rbg_small_image,shape))
             name,dist=self.find_best_match(face_encoding)
             results.append(name)
             left=int(detection.left()/scale_factor)
@@ -45,7 +49,7 @@ class Recognizer:
             cv2.rectangle(image,(left,top),(right,bottom),color,2)
             cv2.rectangle(image,(left,bottom-35),(right,bottom),color,cv2.FILLED)
             label=f"{name}({dist:.2f})"
-            cv2.putText(image,label,(left+6,bottom-6),cv2.FONT_HERSHEY_COMPLEX_SMALL,0.8,(255,255,255),1)
+            image=cv2_add_chinese_text(image,label,(left+6,bottom-30),(255,255,255),15)
         return image,results
 def main():
     recognizer=Recognizer()

@@ -1,3 +1,17 @@
+"""
+禁止使用集体照、合照裁剪的人脸作为注册照；
+禁止使用美颜、P 图、滤镜处理过的照片；
+禁止使用翻拍屏幕 / 照片的二次拍摄图；
+禁止使用人脸偏转超过 30° 的侧脸、低头 / 仰头照；
+禁止使用遮挡五官的照片（口罩、墨镜、头发挡眼等）；
+禁止使用模糊、拖影、满是噪点的低质量照片；
+禁止单个人放入 10 张以上高度重复的照片。
+"""
+
+'''
+统一用识别摄像头，在固定位置、固定光线、固定距离下，让每个人拍摄 3 张标准照（正脸、微左、微右），一次性完成注册，保证所有照片的一致性。
+'''
+
 import sys
 import dlib
 import cv2
@@ -32,7 +46,6 @@ def build_database():
     for filename in files:
         name=os.path.splitext(filename)[0]
         full_path=os.path.join(DATASET_DIR,filename)
-        print(full_path)
         encoding=get_face_encoding_from_image_path(full_path)
         known_encodings.append(encoding)
         known_names.append(name)
