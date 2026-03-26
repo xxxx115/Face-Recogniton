@@ -34,24 +34,47 @@ def get_face_encoding_from_image_path(img_path):
     img=cv2.imdecode(img_array,cv2.IMREAD_COLOR)
     img_rbg=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
     dets=detector(img_rbg,1)
+    if len(dets)!=1:
+        print(f"{img_path}检测到{len(dets)}张人脸")
+        return None
     face=dets[0]
     shape=sp(img_rbg,face)
     face_descriptor=facerec.compute_face_descriptor(img_rbg,shape)
     return np.array(face_descriptor)
-
+def aggregate_encodings(encodings,weights=None):
+    encodings=np.array(encodings)
+    return np.average(encodings,axis=0,weights=weights)
 def build_database():
     known_encodings=[]
     known_names=[]
-    files=os.listdir(DATASET_FOLDER)
-    for filename in files:
-        name=os.path.splitext(filename)[0]
-        full_path=os.path.join(DATASET_DIR,filename)
-        encoding=get_face_encoding_from_image_path(full_path)
-        known_encodings.append(encoding)
-        known_names.append(name)
+    for person_name in os.listdir(DATASET_DIR):
+        person_dir=os.path.join(DATASET_DIR,person_name)
+        if not os.path.isdir(person_dir):
+            continue
+        person_encodings=[]
+        angle_weight={}
+        for img_file in os.listdir(person_dir):
+            img_path=os.path.join(person_dir,img_file)
+            encoding=get_face_encoding_from_image_path(img_path)
+            if encoding is not None:
+                person_encodings.append(encoding)
+                if "front" in img_file.lower():
+                    angle_weight[img_path]=0.5
+                if "left"  in img_file.lower():
+                    angle_weight[img_path]=0.25
+                if "right" in img_file.lower():
+                    angle_weight[img_path]=0.25
+        if person_encodings:
+            weights=[angle_weight.get(os.path.join(person_dir,img_file),1/len(person_encodings)) for img_file in os.listdir(person_dir)
+                     if get_face_encoding_from_image_path(os.path.join(person_dir,img_file)) is not None]
+            final_weight=aggregate_encodings(person_encodings,weights)
+            known_encodings.append(final_weight)
+            known_names.append(person_name)
     data={"encodings":known_encodings,"names":known_names}
     save_path="face.database.pkl"
     with open(save_path,"wb") as f:
         pickle.dump(data,f)
+    print(f"人脸数据库构建完成，共收录 {len(known_names)} 人")
+
 if __name__=="__main__":
     build_database()

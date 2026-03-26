@@ -1,10 +1,7 @@
-import sys
 import dlib
-import cv2
 import cv2
 import numpy as np
 import pickle
-import putText_chinese
 from putText_chinese import cv2_add_chinese_text
 
 CNN_DETECTOR_PATH = "model/mmod_human_face_detector.dat"
@@ -25,7 +22,7 @@ class Recognizer:
         distances=np.linalg.norm(self.known_encodings-face_encoding,axis=1)
         best_match_index=np.argmin(distances)
         min_distance=distances[best_match_index]
-        if min_distance<0.5:
+        if min_distance<0.55:
             return self.known_name[best_match_index],min_distance
         else:
             return "未知",min_distance
@@ -47,9 +44,9 @@ class Recognizer:
             bottom=int(detection.bottom()/scale_factor)
             color=(0,255,0) if name !="未知" else(0,0,255)
             cv2.rectangle(image,(left,top),(right,bottom),color,2)
-            cv2.rectangle(image,(left,bottom-35),(right,bottom),color,cv2.FILLED)
+            cv2.rectangle(image,(left,bottom-20),(right,bottom),color,cv2.FILLED)
             label=f"{name}({dist:.2f})"
-            image=cv2_add_chinese_text(image,label,(left+6,bottom-30),(255,255,255),15)
+            image=cv2_add_chinese_text(image,label,(left+6,bottom-16),(255,255,255),15)
         return image,results
 def main():
     recognizer=Recognizer()
